@@ -7,6 +7,7 @@ class SettingsManager extends ChangeNotifier {
   static const String _soundKey = 'is_sound_enabled';
   static const String _vibrationKey = 'is_vibration_enabled';
   static const String _colorDimmingKey = 'is_color_dimming_enabled';
+  int coutAdplay = 0;
 
   bool _isSoundEnabled = true;
   bool _isVibrationEnabled = true;
@@ -40,5 +41,18 @@ class SettingsManager extends ChangeNotifier {
     _isColorDimmingEnabled = !_isColorDimmingEnabled;
     _prefs.setBool(_colorDimmingKey, _isColorDimmingEnabled);
     notifyListeners();
+  }
+
+  bool adPresentView() {
+    coutAdplay = _prefs.getInt("acoutPLay") ?? 0;
+    if (coutAdplay == 3) {
+      coutAdplay = 0;
+      _prefs.setInt("acoutPLay", coutAdplay);
+      return true;
+    } else {
+      coutAdplay++;
+      _prefs.setInt("acoutPLay", coutAdplay);
+      return false;
+    }
   }
 }

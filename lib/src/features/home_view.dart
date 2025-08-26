@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:memory_color/src/core/helpers/ad_helper.dart';
 import 'package:memory_color/src/core/services/score_manager.dart';
 import 'package:memory_color/src/core/services/settings_manager.dart';
 import 'package:memory_color/src/core/theme/theme_manager.dart';
@@ -53,6 +55,22 @@ class HomeView extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+      // BANER AD
+      bottomNavigationBar: SafeArea(
+        child: SizedBox(
+          height: 50,
+          width: MediaQuery.of(context).size.width,
+          child: AdWidget(
+            ad: BannerAd(
+              adUnitId:
+                  AdHelper.bannerAdUnitId, // Usa o ID de teste do seu helper
+              size: AdSize.banner,
+              request: const AdRequest(),
+              listener: const BannerAdListener(),
+            )..load(),
+          ),
         ),
       ),
     );

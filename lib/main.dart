@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:memory_color/src/core/services/ad_manager.dart';
 import 'package:memory_color/src/core/services/score_manager.dart';
 import 'package:memory_color/src/core/services/settings_manager.dart';
 import 'package:memory_color/src/core/services/sound_manager.dart';
@@ -13,12 +15,16 @@ import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MobileAds.instance.initialize();
   final soundManager = SoundManager();
   final settingsManager = SettingsManager();
   await settingsManager.init();
   final vibratorManager = VibratorManager(settingsManager);
   final scoreManager = ScoreManager();
   await scoreManager.init();
+
+  final adManager = AdManager();
+  adManager.loadInterstitialAd();
   runApp(
     MultiProvider(
       providers: [
@@ -30,6 +36,7 @@ void main() async {
       child: MainApp(
         soundManager: soundManager,
         vibratorManager: vibratorManager,
+        adManager: adManager,
       ),
     ),
   );
@@ -38,10 +45,12 @@ void main() async {
 class MainApp extends StatelessWidget {
   final SoundManager soundManager;
   final VibratorManager vibratorManager;
+  final AdManager adManager;
   const MainApp({
     super.key,
     required this.soundManager,
     required this.vibratorManager,
+    required this.adManager,
   });
 
   @override
@@ -70,6 +79,7 @@ class MainApp extends StatelessWidget {
                 vibratorManager,
                 Provider.of<SettingsManager>(context, listen: false),
                 Provider.of<ScoreManager>(context, listen: false),
+                adManager,
               ),
               child: GameView(),
             );

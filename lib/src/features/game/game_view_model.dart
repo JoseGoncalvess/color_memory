@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:memory_color/src/core/enum/game_state.dart';
-import 'package:memory_color/src/core/const.dart';
+import 'package:memory_color/src/core/helpers/const.dart';
+import 'package:memory_color/src/core/services/ad_manager.dart';
 import 'package:memory_color/src/core/services/score_manager.dart';
 import 'package:memory_color/src/core/services/settings_manager.dart';
 import 'package:memory_color/src/core/services/sound_manager.dart';
@@ -14,6 +15,7 @@ class GameViewModel extends ChangeNotifier {
   final VibratorManager _vibratorManager; // Referência para o VibratorManager
   final SettingsManager _settingsManager; // Referência para o SettingsManager
   final ScoreManager _scoreManager;
+  final AdManager _adManager;
 
   GameViewModel(
     this.context,
@@ -22,6 +24,7 @@ class GameViewModel extends ChangeNotifier {
     this._vibratorManager,
     this._settingsManager,
     this._scoreManager,
+    this._adManager,
   );
 
   int _score = 0;
@@ -108,10 +111,6 @@ class GameViewModel extends ChangeNotifier {
         _soundManager.playSoundForAction("gameOver");
       }
 
-      if (_settingsManager.isVibrationEnabled) {
-        _vibratorManager.vibrateError(); // Vibração de erro
-      }
-
       _endGame();
       return;
     }
@@ -142,6 +141,17 @@ class GameViewModel extends ChangeNotifier {
   void _endGame() {
     _gameState = GameState.gameOver;
     _scoreManager.checkAndSaveHighScore(_score);
+
+    if (_settingsManager.isVibrationEnabled) {
+      _vibratorManager.vibrateError();
+    }
+
+    // 3. AQUI ESTÁ A CHAMADA: Exibe o anúncio quando o jogo acaba
+    bool previewAd = _settingsManager.adPresentView();
+    if (previewAd) {
+      _adManager.showInterstitialAd();
+    }
+
     notifyListeners();
   }
 

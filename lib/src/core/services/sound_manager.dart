@@ -1,7 +1,7 @@
 // lib/src/core/services/sound_manager.dart
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:memory_color/src/core/const.dart';
+import 'package:memory_color/src/core/helpers/const.dart';
 
 class SoundManager {
   final AudioPlayer _audioPlayer = AudioPlayer();
