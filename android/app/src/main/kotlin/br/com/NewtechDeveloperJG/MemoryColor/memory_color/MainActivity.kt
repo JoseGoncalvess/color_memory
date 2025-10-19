@@ -1,4 +1,4 @@
-package br.com.NewtechDeveloperJG.MemoryColor.memory_color
+package br.com.NewtechDeveloperJG.MemoryColor
 
 import io.flutter.embedding.android.FlutterActivity
 
