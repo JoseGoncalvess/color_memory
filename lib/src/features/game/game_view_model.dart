@@ -64,7 +64,7 @@ class GameViewModel extends ChangeNotifier {
       notifyListeners();
       if (_settingsManager.isSoundEnabled) {
         await _soundManager.playSoundForColor(color);
-        // await Future.delayed(const Duration(milliseconds: 800));
+        await Future.delayed(Duration(milliseconds: 800));
       } else {
         await _vibratorManager.vibrateToShow();
         await Future.delayed(const Duration(milliseconds: 800));

@@ -11,7 +11,6 @@ class SoundManager {
     if (soundFile != null) {
       await _audioPlayer.play(AssetSource('sounds/$soundFile'));
     }
-    await Future.delayed(Duration(milliseconds: 300));
   }
 
   Future playSoundForAction(String? actionSoud) async {
