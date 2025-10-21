@@ -1,7 +1,9 @@
 // lib/src/features/game/game_view.dart
 
 import 'package:flutter/material.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:memory_color/src/core/enum/game_state.dart';
+import 'package:memory_color/src/core/helpers/ad_helper.dart';
 import 'package:memory_color/src/core/services/settings_manager.dart';
 import 'package:memory_color/src/features/game/game_view_model.dart';
 import 'package:provider/provider.dart';
@@ -24,7 +26,7 @@ class GameView extends StatelessWidget {
                 const SnackBar(
                   backgroundColor: Colors.red,
                   content: Text(
-                    'Você não pode sair durante uma partida!',
+                    'Se você sair agora perderá a pontuação atual!',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
@@ -38,7 +40,7 @@ class GameView extends StatelessWidget {
           },
           child: Scaffold(
             appBar: AppBar(
-              title: const Text('Memória colorida'),
+              title: const Text('Color Memory'),
               centerTitle: true,
               actions: [
                 IconButton(
@@ -50,67 +52,137 @@ class GameView extends StatelessWidget {
                 ),
               ],
             ),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                spacing: 20,
-                children: [
-                  Consumer<GameViewModel>(
-                    builder: (context, viewModel, child) {
-                      return Text(
-                        'Score: ${viewModel.score}',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      );
-                    },
+            body: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              spacing: 20,
+              children: [
+                SizedBox(
+                  height: 50,
+                  width: MediaQuery.of(context).size.width,
+                  child: AdWidget(
+                    ad: BannerAd(
+                      adUnitId: AdHelper
+                          .bannerAdUnitId, // Usa o ID de teste do seu helper
+                      size: AdSize.banner,
+                      request: const AdRequest(),
+                      listener: const BannerAdListener(),
+                    )..load(),
                   ),
-
-                  Consumer<GameViewModel>(
-                    builder: (context, value, child) => SizedBox(
-                      height: 350,
-                      width: 350,
-                      child: GridView.builder(
-                        itemCount: viewModel.gameColors.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: viewModel.gameColors.length <= 4
-                              ? 2
-                              : 4,
-                          mainAxisSpacing: 2,
-                          crossAxisSpacing: 2,
-                        ),
-
-                        itemBuilder: (context, index) {
-                          final color = viewModel.gameColors[index];
-                          return _buildColorSquare(
-                            viewModel,
-                            color,
-                            Provider.of<SettingsManager>(context),
-                          );
-                        },
+                ),
+                Consumer<GameViewModel>(
+                  builder: (context, viewModel, child) {
+                    return Text(
+                      'Score: ${viewModel.score}',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
                       ),
+                    );
+                  },
+                ),
+                Consumer<GameViewModel>(
+                  builder: (context, viewModel, child) {
+                    String textToShow = '';
+                    Color textColor =
+                        Theme.of(context).textTheme.bodyLarge?.color ??
+                        Colors.grey;
+
+                    // Define o texto e a cor com base no estado do jogo
+                    switch (viewModel.gameState) {
+                      case GameState.showingSequence:
+                        textToShow = viewModel.gameSequence.length >= 10
+                            ? "Atenção esta ficando difícil..."
+                            : 'Observe a Sequência...';
+                        textColor = Colors.blueAccent;
+                        break;
+                      case GameState.waitingForPlayer:
+                        textToShow = 'Vamos lá, é a sua vez!';
+                        textColor = Colors.green;
+                        break;
+                      case GameState.gameOver:
+                        textToShow = 'Ops! Game Over!';
+                        textColor = Colors.redAccent;
+                      case GameState.initForGame:
+                        textToShow = '';
+                        break;
+                    }
+
+                    // AnimatedSwitcher cuida da animação de fade entre os textos
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder:
+                          (Widget child, Animation<double> animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: child,
+                            );
+                          },
+                      child: Text(
+                        textToShow,
+                        // A Key é essencial para o AnimatedSwitcher saber
+                        // que o widget mudou e que ele deve animar.
+                        key: ValueKey<String>(textToShow),
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  },
+                ),
+
+                Consumer<GameViewModel>(
+                  builder: (context, value, child) => Expanded(
+                    // height: 350,
+                    // width: 350,
+                    child: GridView.builder(
+                      itemCount: viewModel.gameColors.length,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: viewModel.gameColors.length <= 4
+                            ? 2
+                            : 4,
+                        mainAxisSpacing: 2,
+                        crossAxisSpacing: 2,
+                      ),
+
+                      itemBuilder: (context, index) {
+                        final color = viewModel.gameColors[index];
+                        return _buildColorSquare(
+                          viewModel,
+                          color,
+                          Provider.of<SettingsManager>(context),
+                        );
+                      },
                     ),
                   ),
+                ),
 
-                  Consumer<GameViewModel>(
-                    builder: (context, viewModel, child) {
-                      if (viewModel.gameState == GameState.gameOver) {
-                        return ElevatedButton(
+                Consumer<GameViewModel>(
+                  builder: (context, viewModel, child) {
+                    if (viewModel.gameState == GameState.gameOver) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 50.0),
+                        child: ElevatedButton(
                           onPressed: () => viewModel.startGame(),
                           child: const Text('Tentar Novamente'),
-                        );
-                      } else if (viewModel.gameState == GameState.initForGame) {
-                        return ElevatedButton(
+                        ),
+                      );
+                    } else if (viewModel.gameState == GameState.initForGame) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 50.0),
+                        child: ElevatedButton(
                           onPressed: () => viewModel.startGame(),
                           child: const Text('Iniciar Jogo'),
-                        );
-                      }
-                      return Container();
-                    },
-                  ),
-                ],
-              ),
+                        ),
+                      );
+                    }
+                    return Container();
+                  },
+                ),
+              ],
             ),
           ),
         );
@@ -130,7 +202,7 @@ class GameView extends StatelessWidget {
     final colorToUse = isHighlighted
         ? color
         : settingsManager.isColorDimmingEnabled
-        ? color.withOpacity(0.5)
+        ? color.withOpacity(0.3)
         : color;
 
     final bool canTap = viewModel.gameState == GameState.waitingForPlayer;
@@ -138,19 +210,15 @@ class GameView extends StatelessWidget {
       onTap: canTap ? () => viewModel.handlePlayerTap(color) : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        width: 200,
-        height: 200,
-        margin: const EdgeInsets.all(8),
+        width: 180,
+        height: 180,
+        margin: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: colorToUse,
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             if (isHighlighted)
-              BoxShadow(
-                color: color.withOpacity(0.8),
-                blurRadius: 15,
-                spreadRadius: 5,
-              ),
+              BoxShadow(color: color, blurRadius: 15, spreadRadius: 3),
           ],
         ),
       ),

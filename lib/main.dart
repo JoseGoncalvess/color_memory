@@ -58,7 +58,7 @@ class MainApp extends StatelessWidget {
     return Consumer<ThemeManager>(
       builder: (context, themeManager, child) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: "Memória Colorida",
+        title: "Color Memory",
         theme: AppThemes.lightTheme,
         darkTheme: AppThemes.darkTheme,
         themeMode: themeManager.themeMode,

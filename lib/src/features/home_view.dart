@@ -16,7 +16,7 @@ class HomeView extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Memória Colorida'),
+        title: const Text('Color Memory'),
         centerTitle: true,
         actions: [
           IconButton(
@@ -78,8 +78,6 @@ class HomeView extends StatelessWidget {
 }
 
 void _showDifficultyDialog(BuildContext context) {
-  // 1. Capturamos o ViewModel ANTES de chamar o showDialog.
-  // Este 'context' é o da HomeView, que é o que queremos.
   final homeViewModel = Provider.of<HomeViewModel>(context, listen: false);
   showDialog(
     context: context,
@@ -173,18 +171,11 @@ void _showSettingsDialog(BuildContext context) {
                 sManager.toggleVibration,
               ),
             ),
-            Consumer<SettingsManager>(
-              builder: (context, sManager, child) => _buildSettingSwitch(
-                context,
-                'Cores Opacas',
-                sManager.isColorDimmingEnabled,
-                sManager.toggleColorDimming,
-              ),
-            ),
+
             const SizedBox(height: 16),
             Consumer<ThemeManager>(
               builder: (context, tManager, child) =>
-                  _buildThemeToggle(tManager),
+                  _buildThemeButton(tManager),
             ),
           ],
         ),
@@ -193,7 +184,7 @@ void _showSettingsDialog(BuildContext context) {
   );
 }
 
-Widget _buildThemeToggle(ThemeManager themeManager) {
+Widget _buildThemeButton(ThemeManager themeManager) {
   final bool isDark = themeManager.themeMode == ThemeMode.dark;
   return ElevatedButton(
     onPressed: () {

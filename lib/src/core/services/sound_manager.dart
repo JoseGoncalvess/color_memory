@@ -6,16 +6,17 @@ import 'package:memory_color/src/core/helpers/const.dart';
 class SoundManager {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
-  void playSoundForColor(Color color) {
+  Future playSoundForColor(Color color) async {
     final soundFile = colorSoundMap[color];
     if (soundFile != null) {
-      _audioPlayer.play(AssetSource('sounds/$soundFile'));
+      await _audioPlayer.play(AssetSource('sounds/$soundFile'));
     }
+    await Future.delayed(Duration(milliseconds: 300));
   }
 
-  void playSoundForAction(String? actionSoud) {
+  Future playSoundForAction(String? actionSoud) async {
     if (actionSoud != null && actionSoud != "") {
-      _audioPlayer.play(AssetSource('sounds/$actionSoud.wav'));
+      await _audioPlayer.play(AssetSource('sounds/$actionSoud.wav'));
     }
   }
 

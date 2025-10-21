@@ -19,7 +19,7 @@ final Map<Color, String> colorSoundMap = {
   Colors.red: 'red.wav',
   Colors.blue: 'blue.wav',
   Colors.green: 'green.wav',
-  Colors.yellow: 'yellow.wav',
+  const Color.fromARGB(255, 253, 231, 31): 'yellow.wav',
   Colors.purple: 'purple.wav',
   Colors.orange: 'orange.wav',
   Colors.cyan: 'cyan.wav',

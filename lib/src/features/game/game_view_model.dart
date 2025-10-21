@@ -55,18 +55,23 @@ class GameViewModel extends ChangeNotifier {
   }
 
   Future _showSequence() async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    _gameState = GameState.showingSequence;
+    notifyListeners();
+    await Future.delayed(const Duration(milliseconds: 200));
 
     for (var color in gameSequence) {
       _activeColor = color;
-      if (_settingsManager.isSoundEnabled) {
-        _soundManager.playSoundForColor(color);
-      }
       notifyListeners();
-      await Future.delayed(const Duration(milliseconds: 500));
+      if (_settingsManager.isSoundEnabled) {
+        await _soundManager.playSoundForColor(color);
+        // await Future.delayed(const Duration(milliseconds: 800));
+      } else {
+        await _vibratorManager.vibrateToShow();
+        await Future.delayed(const Duration(milliseconds: 800));
+      }
       _activeColor = null;
       notifyListeners();
-      await Future.delayed(const Duration(milliseconds: 200));
+      await Future.delayed(const Duration(seconds: 1));
     }
     _gameState = GameState.waitingForPlayer;
     notifyListeners();
@@ -82,11 +87,13 @@ class GameViewModel extends ChangeNotifier {
     if (_gameState != GameState.waitingForPlayer) {
       return;
     }
+
     if (_settingsManager.isSoundEnabled) {
-      _soundManager.playSoundForColor(color);
+      await _soundManager.playSoundForColor(color);
     }
+
     if (_settingsManager.isVibrationEnabled) {
-      _vibratorManager.vibrateTap();
+      await _vibratorManager.vibrateTap();
     }
 
     _playerActiveColor = color;
@@ -146,7 +153,6 @@ class GameViewModel extends ChangeNotifier {
       _vibratorManager.vibrateError();
     }
 
-    // 3. AQUI ESTÁ A CHAMADA: Exibe o anúncio quando o jogo acaba
     bool previewAd = _settingsManager.adPresentView();
     if (previewAd) {
       _adManager.showInterstitialAd();
@@ -154,8 +160,4 @@ class GameViewModel extends ChangeNotifier {
 
     notifyListeners();
   }
-
-  // TODO: Adicionar lógica para animação e display da sequência.
-  // Isso pode ser uma stream ou um Future.delayed.
-  // Vamos pensar na melhor forma de fazer isso.
 }

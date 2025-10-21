@@ -6,21 +6,27 @@ class VibratorManager {
 
   VibratorManager(this._settingsManager);
 
-  void vibrateTap() async {
+  Future vibrateTap() async {
     if (_settingsManager.isVibrationEnabled && await Vibration.hasVibrator()) {
-      Vibration.vibrate(duration: 50);
+      await Vibration.vibrate(duration: 50);
+    }
+  }
+
+  Future vibrateToShow() async {
+    if (_settingsManager.isVibrationEnabled && await Vibration.hasVibrator()) {
+      await Vibration.vibrate(duration: 50);
     }
   }
 
   void vibrateSuccess() async {
     if (_settingsManager.isVibrationEnabled && await Vibration.hasVibrator()) {
-      Vibration.vibrate(duration: 100);
+      await Vibration.vibrate(duration: 100);
     }
   }
 
   void vibrateError() async {
     if (_settingsManager.isVibrationEnabled && await Vibration.hasVibrator()) {
-      Vibration.vibrate(duration: 250);
+      await Vibration.vibrate(duration: 250);
     }
   }
 }
