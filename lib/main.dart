@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:memory_color/src/core/services/ad_manager.dart';
 import 'package:memory_color/src/core/services/score_manager.dart';
@@ -16,6 +16,8 @@ import 'package:provider/provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MobileAds.instance.initialize();
+  final themeManager = ThemeManager();
+  await themeManager.init();
   final soundManager = SoundManager();
   final settingsManager = SettingsManager();
   await settingsManager.init();
@@ -28,7 +30,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ThemeManager()),
+        ChangeNotifierProvider.value(value: themeManager),
         ChangeNotifierProvider.value(value: settingsManager),
         ChangeNotifierProvider.value(value: scoreManager),
       ],

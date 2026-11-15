@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 const List<Color> allGameColors = [
   Colors.red,
@@ -19,7 +19,7 @@ final Map<Color, String> colorSoundMap = {
   Colors.red: 'red.wav',
   Colors.blue: 'blue.wav',
   Colors.green: 'green.wav',
-  const Color.fromARGB(255, 253, 231, 31): 'yellow.wav',
+  Colors.yellow: 'yellow.wav',
   Colors.purple: 'purple.wav',
   Colors.orange: 'orange.wav',
   Colors.cyan: 'cyan.wav',

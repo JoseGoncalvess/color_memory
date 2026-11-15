@@ -1,27 +1,40 @@
 // lib/src/core/services/settings_manager.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsManager extends ChangeNotifier {
   late SharedPreferences _prefs;
+  static const String _speedKey = 'sequence_speed';
+  static const List<double> sequenceSpeeds = [1.5, 2.0, 2.5];
   static const String _soundKey = 'is_sound_enabled';
   static const String _vibrationKey = 'is_vibration_enabled';
   static const String _colorDimmingKey = 'is_color_dimming_enabled';
   int coutAdplay = 0;
 
+  double _sequenceSpeed = 1.5;
   bool _isSoundEnabled = true;
   bool _isVibrationEnabled = true;
   bool _isColorDimmingEnabled = true;
 
+  double get sequenceSpeed => _sequenceSpeed;
   bool get isSoundEnabled => _isSoundEnabled;
   bool get isVibrationEnabled => _isVibrationEnabled;
   bool get isColorDimmingEnabled => _isColorDimmingEnabled;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    final savedSpeed = _prefs.getDouble(_speedKey);
+    _sequenceSpeed = sequenceSpeeds.contains(savedSpeed) ? savedSpeed! : 1.5;
     _isSoundEnabled = _prefs.getBool(_soundKey) ?? true;
     _isVibrationEnabled = _prefs.getBool(_vibrationKey) ?? true;
     _isColorDimmingEnabled = _prefs.getBool(_colorDimmingKey) ?? true;
+    notifyListeners();
+  }
+
+  void setSequenceSpeed(double speed) {
+    if (!sequenceSpeeds.contains(speed) || speed == _sequenceSpeed) return;
+    _sequenceSpeed = speed;
+    _prefs.setDouble(_speedKey, speed);
     notifyListeners();
   }
 

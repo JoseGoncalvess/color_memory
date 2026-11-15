@@ -1,225 +1,183 @@
-// lib/src/features/game/game_view.dart
-
-import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:memory_color/src/core/enum/game_state.dart';
-import 'package:memory_color/src/core/helpers/ad_helper.dart';
 import 'package:memory_color/src/core/services/settings_manager.dart';
 import 'package:memory_color/src/features/game/game_view_model.dart';
+import 'package:memory_color/src/features/widgets/banner_ad_view.dart';
+import 'package:memory_color/src/features/widgets/game_modals.dart';
 import 'package:provider/provider.dart';
 
 class GameView extends StatelessWidget {
   const GameView({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return Consumer<GameViewModel>(
-      builder: (context, viewModel, child) {
-        return PopScope(
-          canPop:
-              viewModel.gameState == GameState.gameOver ||
-              viewModel.gameState == GameState.initForGame,
-
-          onPopInvokedWithResult: (bool didPop, dynamic result) {
-            if (!didPop) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  backgroundColor: Colors.red,
-                  content: Text(
-                    'Se você sair agora perderá a pontuação atual!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            }
-          },
-          child: Scaffold(
-            appBar: AppBar(
-              title: const Text('Color Memory'),
-              centerTitle: true,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.exit_to_app_outlined),
-                  onPressed: () {
-                    viewModel.exitGame();
-                    Navigator.of(context).pop();
-                  },
-                ),
-              ],
+    final model = context.watch<GameViewModel>();
+    final settings = context.watch<SettingsManager>();
+    final scheme = Theme.of(context).colorScheme;
+    final status = switch (model.gameState) {
+      GameState.initForGame => 'Preparado para começar?',
+      GameState.showingSequence => 'Observe a sequência',
+      GameState.waitingForPlayer => model.canAcceptTap
+          ? 'Sua vez! Repita as cores'
+          : 'Aguarde o próximo toque',
+      GameState.gameOver => 'Fim de jogo!',
+    };
+    return PopScope(
+      canPop:
+          model.gameState == GameState.gameOver ||
+          model.gameState == GameState.initForGame,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Use o botão de sair para encerrar a partida.'),
             ),
-            body: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              spacing: 20,
-              children: [
-                SizedBox(
-                  height: 50,
-                  width: MediaQuery.of(context).size.width,
-                  child: AdWidget(
-                    ad: BannerAd(
-                      adUnitId: AdHelper
-                          .bannerAdUnitId, // Usa o ID de teste do seu helper
-                      size: AdSize.banner,
-                      request: const AdRequest(),
-                      listener: const BannerAdListener(),
-                    )..load(),
-                  ),
-                ),
-                Consumer<GameViewModel>(
-                  builder: (context, viewModel, child) {
-                    return Text(
-                      'Score: ${viewModel.score}',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+          );
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text(
+            'Color Memory',
+            style: TextStyle(fontWeight: FontWeight.w800),
+          ),
+          automaticallyImplyLeading: false,
+          actions: [
+            IconButton(
+              tooltip: 'Sair da partida',
+              icon: const Icon(Icons.close),
+              onPressed: () async {
+                if (model.gameState == GameState.showingSequence ||
+                    model.gameState == GameState.waitingForPlayer) {
+                  final leave = await showExitConfirmation(context);
+                  if (leave != true || !context.mounted) return;
+                }
+                model.exitGame();
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) Navigator.of(context).pop();
+                });
+              },
+            ),
+          ],
+        ),
+        bottomNavigationBar: const BannerAdView(),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: LayoutBuilder(
+                builder: (context, constraints) => SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'PONTUAÇÃO',
+                            style: TextStyle(
+                              color: scheme.onSurfaceVariant,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.4,
+                            ),
+                          ),
+                          Text(
+                            '${model.score}',
+                            style: Theme.of(context).textTheme.displayLarge
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: scheme.primary,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 200),
+                            child: Text(
+                              status,
+                              key: ValueKey(status),
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: model.gameColors.length,
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: model.gameColors.length <= 4
+                                      ? 2
+                                      : 4,
+                                  mainAxisSpacing: 12,
+                                  crossAxisSpacing: 12,
+                                ),
+                            itemBuilder: (context, index) {
+                              final color = model.gameColors[index];
+                              final active =
+                                  model.activeColor == color ||
+                                  model.playerActiveColor == color;
+                              return Semantics(
+                                button: true,
+                                label: 'Cor ${index + 1}',
+                                enabled:
+                                    model.canAcceptTap,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(22),
+                                    onTap:
+                                        model.canAcceptTap
+                                        ? () => model.handlePlayerTap(color)
+                                        : null,
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 180,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            active ||
+                                                !settings.isColorDimmingEnabled
+                                            ? color
+                                            : color.withValues(alpha: 0.42),
+                                        borderRadius: BorderRadius.circular(22),
+                                        border: Border.all(
+                                          color: active
+                                              ? scheme.onSurface
+                                              : Colors.transparent,
+                                          width: 3,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 28),
+                          if (model.gameState == GameState.initForGame ||
+                              model.gameState == GameState.gameOver)
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton(
+                                onPressed: model.startGame,
+                                child: Text(
+                                  model.gameState == GameState.gameOver
+                                      ? 'Jogar novamente'
+                                      : 'Começar',
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                    );
-                  },
-                ),
-                Consumer<GameViewModel>(
-                  builder: (context, viewModel, child) {
-                    String textToShow = '';
-                    Color textColor =
-                        Theme.of(context).textTheme.bodyLarge?.color ??
-                        Colors.grey;
-
-                    // Define o texto e a cor com base no estado do jogo
-                    switch (viewModel.gameState) {
-                      case GameState.showingSequence:
-                        textToShow = viewModel.gameSequence.length >= 10
-                            ? "Atenção esta ficando difícil..."
-                            : 'Observe a Sequência...';
-                        textColor = Colors.blueAccent;
-                        break;
-                      case GameState.waitingForPlayer:
-                        textToShow = 'Vamos lá, é a sua vez!';
-                        textColor = Colors.green;
-                        break;
-                      case GameState.gameOver:
-                        textToShow = 'Ops! Game Over!';
-                        textColor = Colors.redAccent;
-                      case GameState.initForGame:
-                        textToShow = '';
-                        break;
-                    }
-
-                    // AnimatedSwitcher cuida da animação de fade entre os textos
-                    return AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      transitionBuilder:
-                          (Widget child, Animation<double> animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: child,
-                            );
-                          },
-                      child: Text(
-                        textToShow,
-                        // A Key é essencial para o AnimatedSwitcher saber
-                        // que o widget mudou e que ele deve animar.
-                        key: ValueKey<String>(textToShow),
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    );
-                  },
-                ),
-
-                Consumer<GameViewModel>(
-                  builder: (context, value, child) => Expanded(
-                    // height: 350,
-                    // width: 350,
-                    child: GridView.builder(
-                      itemCount: viewModel.gameColors.length,
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: viewModel.gameColors.length <= 4
-                            ? 2
-                            : 4,
-                        mainAxisSpacing: 2,
-                        crossAxisSpacing: 2,
-                      ),
-
-                      itemBuilder: (context, index) {
-                        final color = viewModel.gameColors[index];
-                        return _buildColorSquare(
-                          viewModel,
-                          color,
-                          Provider.of<SettingsManager>(context),
-                        );
-                      },
                     ),
                   ),
                 ),
-
-                Consumer<GameViewModel>(
-                  builder: (context, viewModel, child) {
-                    if (viewModel.gameState == GameState.gameOver) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 50.0),
-                        child: ElevatedButton(
-                          onPressed: () => viewModel.startGame(),
-                          child: const Text('Tentar Novamente'),
-                        ),
-                      );
-                    } else if (viewModel.gameState == GameState.initForGame) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 50.0),
-                        child: ElevatedButton(
-                          onPressed: () => viewModel.startGame(),
-                          child: const Text('Iniciar Jogo'),
-                        ),
-                      );
-                    }
-                    return Container();
-                  },
-                ),
-              ],
+              ),
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildColorSquare(
-    GameViewModel viewModel,
-    Color color,
-    SettingsManager settingsManager,
-  ) {
-    final bool isGameActive = viewModel.activeColor == color;
-    final bool isPlayerActive = viewModel.playerActiveColor == color;
-
-    final bool isHighlighted = isGameActive || isPlayerActive;
-    final colorToUse = isHighlighted
-        ? color
-        : settingsManager.isColorDimmingEnabled
-        ? color.withOpacity(0.3)
-        : color;
-
-    final bool canTap = viewModel.gameState == GameState.waitingForPlayer;
-    return GestureDetector(
-      onTap: canTap ? () => viewModel.handlePlayerTap(color) : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        width: 180,
-        height: 180,
-        margin: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: colorToUse,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            if (isHighlighted)
-              BoxShadow(color: color, blurRadius: 15, spreadRadius: 3),
-          ],
         ),
       ),
     );

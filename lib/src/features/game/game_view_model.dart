@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:memory_color/src/core/enum/game_state.dart';
 import 'package:memory_color/src/core/helpers/const.dart';
 import 'package:memory_color/src/core/services/ad_manager.dart';
@@ -27,6 +27,9 @@ class GameViewModel extends ChangeNotifier {
     this._adManager,
   );
 
+  bool _disposed = false;
+  bool _handlingTap = false;
+  int _round = 0;
   int _score = 0;
   Color? _activeColor;
   Color? _playerActiveColor;
@@ -41,11 +44,16 @@ class GameViewModel extends ChangeNotifier {
   List<Color> get gameSequence => _gameSequence;
   GameState get gameState => _gameState;
   List<Color> get gameColors => _gameColors;
+  bool get canAcceptTap => _gameState == GameState.waitingForPlayer && !_handlingTap;
 
   final int _numberOfColors;
   List<Color> get _gameColors => allGameColors.sublist(0, _numberOfColors);
 
   void startGame() {
+    _round++;
+    _handlingTap = false;
+    _activeColor = null;
+    _playerActiveColor = null;
     _score = 0;
     _gameSequence.clear();
     _playerSequence.clear();
@@ -55,24 +63,32 @@ class GameViewModel extends ChangeNotifier {
   }
 
   Future _showSequence() async {
+    final round = _round;
+    final isFastSequence = _gameSequence.length > 10;
+    final speed = isFastSequence ? _settingsManager.sequenceSpeed : 1.0;
     _gameState = GameState.showingSequence;
     notifyListeners();
     await Future.delayed(const Duration(milliseconds: 200));
 
-    for (var color in gameSequence) {
+    if (_disposed || round != _round) return;
+    for (var color in List<Color>.of(gameSequence)) {
+      if (_disposed || round != _round) return;
       _activeColor = color;
       notifyListeners();
       if (_settingsManager.isSoundEnabled) {
-        await _soundManager.playSoundForColor(color);
-        await Future.delayed(Duration(milliseconds: 800));
+        await _soundManager.playSoundForColor(
+          color, playbackRate: speed,
+        );
       } else {
         await _vibratorManager.vibrateToShow();
-        await Future.delayed(const Duration(milliseconds: 800));
+        await Future.delayed(Duration(milliseconds: isFastSequence ? (800 / speed).round() : 800));
       }
+      if (_disposed || round != _round) return;
       _activeColor = null;
       notifyListeners();
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(Duration(milliseconds: isFastSequence ? (525 / speed).round() : 1000));
     }
+    if (_disposed || round != _round) return;
     _gameState = GameState.waitingForPlayer;
     notifyListeners();
   }
@@ -83,39 +99,43 @@ class GameViewModel extends ChangeNotifier {
     _showSequence();
   }
 
-  void handlePlayerTap(Color color) async {
-    if (_gameState != GameState.waitingForPlayer) {
-      return;
-    }
-
-    if (_settingsManager.isSoundEnabled) {
-      await _soundManager.playSoundForColor(color);
-    }
-
-    if (_settingsManager.isVibrationEnabled) {
-      await _vibratorManager.vibrateTap();
-    }
-
+  void handlePlayerTap(Color color) {
+    if (!canAcceptTap) return;
+    _handlingTap = true;
+    final round = _round;
+    _playerSequence.add(color);
     _playerActiveColor = color;
     notifyListeners();
-
-    _playerSequence.add(color);
-
-    await Future.delayed(const Duration(milliseconds: 200));
-
-    _playerActiveColor = null;
-    notifyListeners();
-
-    _checkPlayerInput();
+    if (_settingsManager.isVibrationEnabled) {
+      _vibratorManager.vibrateTap();
+    }
+    _finishPlayerTap(color, round);
   }
 
-  void _checkPlayerInput() async {
+  Future<void> _finishPlayerTap(Color color, int round) async {
+    if (_settingsManager.isSoundEnabled) {
+      await _soundManager.playSoundForColor(color);
+    } else {
+      await Future.delayed(const Duration(milliseconds: 200));
+    }
+    if (_disposed || round != _round) return;
+    _playerActiveColor = null;
+    await _checkPlayerInput();
+    if (_disposed || round != _round) return;
+    _handlingTap = false;
+    notifyListeners();
+  }
+
+  Future<void> _checkPlayerInput() async {
+    final round = _round;
     int currentTapIndex = _playerSequence.length - 1;
 
     if (_playerSequence[currentTapIndex] != _gameSequence[currentTapIndex]) {
       await Future.delayed(const Duration(milliseconds: 100));
+      if (_disposed || round != _round) return;
       if (_settingsManager.isSoundEnabled) {
-        _soundManager.playSoundForAction("gameOver");
+        await _soundManager.playSoundForAction("gameOver");
+        if (_disposed || round != _round) return;
       }
 
       _endGame();
@@ -124,8 +144,10 @@ class GameViewModel extends ChangeNotifier {
 
     if (_playerSequence.length == _gameSequence.length) {
       await Future.delayed(const Duration(milliseconds: 300));
+      if (_disposed || round != _round) return;
       if (_settingsManager.isSoundEnabled) {
-        _soundManager.playSoundForAction("win");
+        await _soundManager.playSoundForAction("win");
+        if (_disposed || round != _round) return;
       }
 
       _score++;
@@ -135,19 +157,27 @@ class GameViewModel extends ChangeNotifier {
       notifyListeners();
 
       Future.delayed(const Duration(seconds: 1), () {
-        _addNewColorToSequence();
+        if (!_disposed && round == _round) _addNewColorToSequence();
       });
     }
   }
 
   void exitGame() {
+    _round++;
     _gameState = GameState.gameOver;
     notifyListeners();
   }
 
+  @override
+  void dispose() {
+    _disposed = true;
+    _round++;
+    super.dispose();
+  }
+
   void _endGame() {
     _gameState = GameState.gameOver;
-    _scoreManager.checkAndSaveHighScore(_score);
+    _scoreManager.saveGame(_score, _numberOfColors);
 
     if (_settingsManager.isVibrationEnabled) {
       _vibratorManager.vibrateError();

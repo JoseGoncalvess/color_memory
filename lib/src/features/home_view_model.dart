@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:memory_color/src/core/services/sound_manager.dart';
 
 class HomeViewModel extends ChangeNotifier {

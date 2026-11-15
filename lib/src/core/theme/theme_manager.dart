@@ -1,18 +1,20 @@
-// lib/src/core/theme/theme_manager.dart
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeManager extends ChangeNotifier {
-  // A variável privada que armazena o estado atual do tema.
+  static const _themeKey = 'is_dark_theme';
+  late SharedPreferences _prefs;
   ThemeMode _themeMode = ThemeMode.light;
-
-  // O getter público para que a UI possa ler o estado atual.
   ThemeMode get themeMode => _themeMode;
 
-  // O método que a UI chamará para alternar o tema.
+  Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
+    _themeMode = (_prefs.getBool(_themeKey) ?? false) ? ThemeMode.dark : ThemeMode.light;
+  }
+
   void toggleTheme(bool isDark) {
     _themeMode = isDark ? ThemeMode.dark : ThemeMode.light;
-    // Notifica todos os 'ouvintes' (widgets) que o estado mudou,
-    // para que eles possam se reconstruir.
+    _prefs.setBool(_themeKey, isDark);
     notifyListeners();
   }
 }
